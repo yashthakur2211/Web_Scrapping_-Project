@@ -1,0 +1,80 @@
+# Lazada Web_Scraping
+
+import pandas as pd
+import numpy as np
+import time
+import requests
+from selenium import webdriver
+from bs4 import BeautifulSoup
+
+def getUrl(key):
+    key = key.replace(' ','+')
+    temp = 'https://www.lazada.com.my/tag/{}'
+    url = temp.format(key)
+    return url
+
+def get_products(card):
+    # Fetching product_name
+    try:
+        product_name = card.find('div', 'RfADt').text
+    except:
+        product_name = 'Not Mentioned'
+
+    # Fetch product_price
+    try:
+        product_price = card.find('span', 'ooOxS').text
+        product_price = clean_price(product_price)
+    except:
+        product_price = 'Not Mentioned'
+
+    # Fetch product_desc
+    try:
+        product_desc = card.find('span', 'IcOsH').text
+    except:
+        product_desc = 'Not Mentioned'
+
+    # Fetch product_img_url
+    try:
+        product_img_url = card.find('div', 'picture-wrapper').find('img')['src']
+    except:
+        product_img_url = 'Not Mentioned'
+
+    # Fetch product_buy_link
+    try:
+        product_buy_link = card.find('div', 'RfADt').find('a')['href']
+    except:
+        product_buy_link = 'Not Mentioned'
+
+    all_product_info = (product_name, product_price, product_desc, product_img_url, product_buy_link)
+    return all_product_info
+
+def clean_price(price):
+    # Check if the price is 'Not Mentioned'
+    if isinstance(price, str) and price == 'Not Mentioned':
+        return np.nan  # Return NaN for missing prices
+    else:
+        # Remove 'RM' and any non-numeric characters, then convert to float
+        price = price.replace('RM', '').replace(',', '').strip()
+        return float(price)
+
+def main():
+    product = input("Enter the product you want to search for on Lazada: ")
+    all_products = []
+    url = getUrl(product)
+    driver = webdriver.Firefox()
+    driver.get(url)
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    cards = soup.find_all('div', 'Bm3ON')
+    for i in cards:
+        temp = get_products(i)
+        all_products.append(temp)
+    col = ['product_name', 'product_price', 'product_desc', 'product_img_url', 'product_buy_link']
+    lazada_product_data = pd.DataFrame(all_products, columns=col)
+    
+    # Clean and convert product_price column to numeric for sorting
+    lazada_product_data = lazada_product_data.sort_values(by='product_price', ascending=False)
+    
+    # Sort DataFrame by product_price in descending order
+    lazada_product_data.to_csv(r'D:\\lazada_product_data.csv', encoding='utf-8', index=False)
+
+main()
