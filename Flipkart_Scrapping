@@ -1,0 +1,82 @@
+# Flipkart Web_Scraping
+
+import pandas as pd
+import numpy as np
+import time
+import requests
+import selenium
+from selenium import webdriver
+import warnings
+warnings.filterwarnings('ignore')
+from bs4 import BeautifulSoup
+
+
+def getUrl(key):
+    key = key.replace(' ','+')
+    temp = 'https://www.flipkart.com/search?q={}'
+    url = temp.format(key)
+    return url
+
+def get_product(card):
+    # Fetch product_name
+    try:
+        product_name = card.find('div','_4rR01T').text
+    except:
+        product_name = 'Not Mentioned'
+        
+    # Fetch product_price
+    try:
+        product_price = card.find('div','_25b18c').text
+        product_price = float(''.join(filter(str.isdigit, product_price)))
+    except:
+        product_price = 'Not Mentioned'
+        
+    # Fetch product_desc
+    try:
+        product_desc = card.find('div','fMghEO').text
+    except:
+        product_desc = 'Not Mentioned'
+
+    # Fetch product_img_url
+    try:
+        product_img_url = card.find('img','_396cs4')['src']
+    except:
+        product_img_url = 'Not Mentioned'
+        
+    # Fetch product_buy_link
+    try:
+        product_buy_link = card.find('a','_1fQZEK')
+        product_buy_link = 'https://www.flipkart.com'+ product_buy_link['href'] 
+    except:
+        product_buy_link = 'Not Mentioned'
+    
+    product_compete_info = (product_name, product_price, product_desc, product_img_url, product_buy_link)
+    return product_compete_info
+
+    # Fetch Price of product.
+    try:
+        product_price = card.find('div','_30jeq3').text
+    except:
+        product_price = 'Not Mentioned' 
+
+def main():
+    product = input("Enter the product you want to search on Flipkart: ")
+    all_products = []
+    url = getUrl(product)
+    driver = webdriver.Firefox()
+    driver.get(url)
+    driver.maximize_window()
+    res = requests.get(url)
+    soup = BeautifulSoup(res.content, 'html.parser')
+    all_divs = soup.find_all('div', '_13oc-S')
+    for i in all_divs:
+        temp = get_product(i)
+        all_products.append(temp)
+    col = ['product_name', 'product_price', 'product_desc', 'product_img_url', 'product_buy_link']
+    flipcart_product_data = pd.DataFrame(all_products, columns=col)
+        
+    # Sort DataFrame by product_price in descending order
+    flipcart_product_data = flipcart_product_data.sort_values(by='product_price', ascending=False)
+    flipcart_product_data.to_csv(r'D:\\flipcart_product_data.csv', encoding='utf-8', index=False)
+
+main()
